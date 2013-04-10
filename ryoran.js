@@ -66,16 +66,17 @@
 			this.containerElement.style.width  = w + "px";
 			this.containerElement.style.height = h + "px";
 
-			this.targetCanvas.width  = w;
-			this.targetCanvas.height = h;
-			
-			this.previewCanvas.width  = w;
-			this.previewCanvas.height = h;
-			
+			this.setCanvasSize(this.targetCanvas, w, h);
+			this.setCanvasSize(this.previewCanvas, w, h);
+
 			for(var i = 0; i < UNDO_MAX; i++) {
-			  this.undoBuffers[i].width = w;
-			  this.undoBuffers[i].height = h;
+				this.setCanvasSize(this.undoBuffers[i], w, h);
 			}
+		},
+		
+		setCanvasSize: function(c, w, h) {
+			c.width = w;
+			c.height = h;
 		},
 		
 		observeDrop: function(target) {
