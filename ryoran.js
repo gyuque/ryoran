@@ -1,6 +1,7 @@
 (function(aGlobal) {
 	'use strict';
 	var BALL_MAX = 300;
+	var UNDO_MAX = 64;
 	var theApp = null;
 	var simulator = null;
 	var dboard = null;
@@ -12,7 +13,11 @@
 	function App(targetCanvas,  previewCanvas) {
 		this.targetCanvas = targetCanvas;
 		this.previewCanvas =  previewCanvas;
-		this.undoBuffer = document.createElement("canvas");
+		this.undoBuffers = new Array();
+		for(var i = 0; i < UNDO_MAX; i++) {
+			this.undoBuffers[i] = document.createElement("canvas");
+		}
+		this.undoIndex = 0;
 		
 		this.dboard = new DrawingBoard(targetCanvas, previewCanvas); 
 		this.simulator = new Simulator(targetCanvas);
@@ -67,8 +72,10 @@
 			this.previewCanvas.width  = w;
 			this.previewCanvas.height = h;
 			
-			this.undoBuffer.width = w;
-			this.undoBuffer.height = h;
+			for(var i = 0; i < UNDO_MAX; i++) {
+			  this.undoBuffers[i].width = w;
+			  this.undoBuffers[i].height = h;
+			}
 		},
 		
 		observeDrop: function(target) {
@@ -95,12 +102,18 @@
 		
 		updateUndoImage: function() {
 			this.undoButton.removeAttribute('disabled');
-			this.undoBuffer.getContext("2d").drawImage(this.targetCanvas, 0, 0);
+			if(this.undoIndex >= UNDO_MAX) {
+				this.undoBuffers.push(this.undoBuffers.shift());
+				this.undoIndex = UNDO_MAX - 1;
+			}
+			this.undoBuffers[this.undoIndex++].getContext("2d").drawImage(this.targetCanvas, 0, 0);
 		},
 		
 		undo: function() {
-			this.undoButton.disabled = "disabled";
-			this.targetCanvas.getContext("2d").drawImage(this.undoBuffer, 0, 0);
+			if(--this.undoIndex === 0) {
+				this.undoButton.disabled = "disabled";
+			}
+			this.targetCanvas.getContext("2d").drawImage(this.undoBuffers[this.undoIndex], 0, 0);
 		},
 		
 		generateDownloadLink: function(isJpeg, q) {
