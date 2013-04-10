@@ -25,6 +25,11 @@ body,html {
 	display: block;
 	text-align: center;
 	padding-top: 135px;
+	padding-bottom: 100px;
+}
+
+#select-file {
+	display: none;
 }
 
 #app-container {
@@ -56,6 +61,7 @@ body,html {
 	<body onload="void launch();">
 		<div id="app-container">
 			<span id="welcome">Drop image file here.</span>
+			<input id="select-file" type="file">
 			<canvas id="target-cv" width="400" height="400"></canvas>
 			<canvas id="preview-cv" width="400" height="400"></canvas>
 		</div>
