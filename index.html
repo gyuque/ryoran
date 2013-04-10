@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>百花繚乱消しメーカー</title>
+		<script type="text/javascript" src="jquery-1.9.1.js"></script>
+		<script type="text/javascript" src="ryoran.js"></script>
+		<style type="text/css">
+body,html {
+	background: #666;
+	margin: 0;
+	padding: 0;
+}
+
+#target-cv,#preview-cv {
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: none;
+}
+
+#welcome {
+	color: #eee;
+	font-size: 70%;
+	display: block;
+	text-align: center;
+	padding-top: 135px;
+}
+
+#app-container {
+	position: absolute;
+	box-shadow: 0 2px 5px #000 inset, 0 0 1px #222;
+	width: 320px;
+	height: 240px;
+	border-bottom: 1px solid #888;
+	background: #333 url(images/logo.png) center 40% no-repeat;
+}
+
+#toolbar {
+	position: fixed;
+	padding: 3px;
+	top: 0;
+	background: rgba(255, 255, 255, 0.3);
+	border: 1px solid rgba(255, 255, 255, 0.5);
+	box-shadow: 0 2px 3px rgba(0,0,0, 0.5);
+	display: none;
+}
+
+#toolbar a {
+	color: #16f;
+	font-weight: bold;
+	text-shadow: 0 0 1px #fff;
+}
+		</style>
+	</head>
+	<body onload="void launch();">
+		<div id="app-container">
+			<span id="welcome">Drop image file here.</span>
+			<canvas id="target-cv" width="400" height="400"></canvas>
+			<canvas id="preview-cv" width="400" height="400"></canvas>
+		</div>
+		
+		<div id="toolbar">
+			<button id="btn-undo">Undo</button> &nbsp;
+			<button id="btn-genpng">Download as PNG</button>
+			<button id="btn-genjpg">Download as JPEG</button>
+			<button id="btn-genjpg-hq">Download as JPEG(HQ)</button> 
+			<a id="dl-link" target="_blank"></a>
+		</div>
+	</body>
+</html>
