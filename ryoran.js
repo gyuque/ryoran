@@ -31,6 +31,8 @@
 		this.undoButton.disabled = "disabled";
 		$(this.undoButton).click(this.undo.bind(this));
 		
+		$('#welcome').click( this.selectFile.bind(this) );
+		$('#select-file').change( this.changeFile.bind(this) );
 		$('#btn-genpng').click( this.generateDownloadLink.bind(this, false) );
 		$('#btn-genjpg').click( this.generateDownloadLink.bind(this, true, 0.8) );
 		$('#btn-genjpg-hq').click( this.generateDownloadLink.bind(this, true, 0.98) );
@@ -79,6 +81,16 @@
 				var files = e.originalEvent.dataTransfer.files;
 				_this.loadImageFile(files[0]);
 			});
+		},
+		
+		selectFile: function() {
+			$('#select-file').click();
+		},
+		
+		changeFile: function(e) {
+			e.preventDefault();
+			var files = e.target.files;
+			this.loadImageFile(files[0]);
 		},
 		
 		updateUndoImage: function() {
