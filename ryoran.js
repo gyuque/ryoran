@@ -163,11 +163,11 @@
 				
 				this.simulator.scale = len / 20.0;
 				this.simulator.setRenderPosition(pos.x, pos.y);
-				this.runSimulator();
+				this.runSimulator(this.dboard.slideVec);
 			}
 		},
 		
-		runSimulator: function() {
+		runSimulator: function(slideVector) {
 			this.simulator.resetBalls();
 			
 			var i, j;
@@ -190,12 +190,23 @@
 
 					ball.v.x =  Math.sin(angle) * v;
 					ball.v.y = -Math.cos(angle) * v;
+					
+					this.applySlide(ball.v, slideVector);
 				}
 			}
 
 			for (i = 0;i < 65;++i) {
 				this.simulator.tick();
 			}	
+		},
+		
+		applySlide: function(v, slideVector) {
+			var r = normal_rand() - 0.5;
+			if (r < 0) { r = -r; }
+			r -= 0.02;
+			
+			v.x += slideVector.x * r * 0.3;
+			v.y += slideVector.y * r * 0.3;
 		}
 	};
 	
@@ -205,6 +216,11 @@
 		this.dragCenter = new Vec2();
 		this.dragPt  = new Vec2();
 		this.dragVec = new Vec2();
+		this.slideStartPt  = new Vec2();
+		this.endPt  = new Vec2();
+		this.slideVec = new Vec2();
+		
+		this.pendingCount = 0;
 		
 		this.previewCanvas = previewCanvas;
 		this.jPreviewCanvas = $(previewCanvas); 
@@ -226,6 +242,10 @@
 		},
 		
 		onMouseDown: function(e) {
+			if (this.isPending()) {
+				return;
+			}
+			
 			this.dragVec.zero();
 			this.dragging = true;
 			var o = this.jPreviewCanvas.offset();
@@ -234,22 +254,39 @@
 		},
 
 		onMouseMove: function(e) {
+			var o = this.jPreviewCanvas.offset();
+			var mx = e.pageX - o.left;
+			var my = e.pageY - o.top;
 			if (this.dragging) {
-				var o = this.jPreviewCanvas.offset();
-				this.dragPt.x = e.pageX - o.left;
-				this.dragPt.y = e.pageY - o.top;
+				this.dragPt.x = mx;
+				this.dragPt.y = my;
 				this.dragVec.copyFrom(this.dragPt).sub(this.dragCenter);
 				var r = this.dragVec.norm();
 
 				this.clearCanvas();
 				this.drawPreview(this.dragCenter.x, this.dragCenter.y, r);
+			} else if (this.isPending()) {
+				this.endPt.x = mx;
+				this.endPt.y = my;
+				
+				this.slideVec.copyFrom(this.endPt).sub(this.slideStartPt);
+				if (this.slideVec.norm() < 4) {
+					// threshold
+					this.slideVec.zero();
+				}
 			}
 		},
 
 		onMouseUp: function(e) {
-			if (this.dragging) {
-				this.endDrag();
-				this.eventDispatcher().trigger(DrawingBoard.TRIGGER_RELEASED);
+			if (!this.isPending()) {
+				if (this.dragging) {
+					this.endPt.copyFrom(this.dragPt);
+					this.slideStartPt.copyFrom(this.dragPt);
+					this.slideVec.zero();
+					this.endDrag();
+					this.pendingCount = 13;
+					this.tickPending();
+				}
 			}
 		},
 		
@@ -260,11 +297,7 @@
 		},
 		
 		drawPreview: function(x, y, r) {
-			var g = this.previewContext;
-			g.fillStyle = "rgba(255, 0, 0, 0.5)";
-			g.beginPath();
-			g.arc(x, y, r, 0, Math.PI*2);
-			g.fill();
+			this.drawRing(x, y, r, 0, Math.PI*2);
 		},
 		
 		onGlobalMouseOut: function(e) {
@@ -274,6 +307,85 @@
 		endDrag: function() {
 			this.dragging = false;	
 			this.clearCanvas();
+		},
+		
+		isPending: function() {
+			return this.pendingCount > 0;
+		},
+		
+		tickPending: function() {
+			if (this.pendingCount > 0) {
+				--this.pendingCount;
+
+				this.drawPendingRing();
+				if (this.pendingCount === 0) {
+					this.clearCanvas();
+					this.eventDispatcher().trigger(DrawingBoard.TRIGGER_RELEASED);
+				} else {
+					setTimeout(this.tickPending.bind(this), 40);
+				}
+			}
+		},
+		
+		drawPendingRing: function() {
+			this.clearCanvas();
+			var r = this.dragVec.norm();
+			var g = this.previewContext;
+			g.lineCap = "round";
+			
+			g.fillStyle = "rgba(0,0,0,0.4)";
+			g.beginPath();
+			g.arc(this.dragCenter.x, this.dragCenter.y, r, 0, Math.PI*2);
+			g.fill();
+			
+			g.strokeStyle = "#fff";
+			g.lineWidth = 3;
+			this.drawArrow(g, this.dragCenter, this.slideVec);
+			g.strokeStyle = "#000";
+			g.lineWidth = 1;
+			this.drawArrow(g, this.dragCenter, this.slideVec);
+
+			if ((this.pendingCount % 2) != 0) {
+				this.drawRing(this.dragCenter.x + this.slideVec.x, this.dragCenter.y + this.slideVec.y, r);
+			}
+		},
+		
+		drawRing: function(x, y, r) {
+			var g = this.previewContext;
+			g.beginPath();
+			g.arc(x, y, r, 0, Math.PI*2);
+
+			g.strokeStyle = "#fff";
+			g.lineWidth = 4;
+			g.stroke();
+
+			g.strokeStyle = "#000";
+			g.lineWidth = 2;
+			g.stroke();
+		},
+		
+		drawArrow: function(g, ptOrigin, ptStep) {
+			var D = _tempVec1.copyFrom(ptStep);
+			var len = D.norm();
+			if (len < 1) {
+				return;
+			}
+			
+			D.mul(1.0 / len);
+			var N = _tempVec2.copyFrom(D).turnLeft();
+			
+			D.mul(-4.0);
+			N.mul(4.0);
+			
+			g.beginPath();
+			g.moveTo(ptOrigin.x, ptOrigin.y);
+			g.lineTo(ptOrigin.x + ptStep.x, ptOrigin.y + ptStep.y);
+			g.stroke();
+
+			g.moveTo(ptOrigin.x + ptStep.x + D.x + N.x, ptOrigin.y + ptStep.y + D.y + N.y);
+			g.lineTo(ptOrigin.x + ptStep.x            , ptOrigin.y + ptStep.y);
+			g.lineTo(ptOrigin.x + ptStep.x + D.x - N.x, ptOrigin.y + ptStep.y + D.y - N.y);
+			g.stroke();
 		}
 	};
 	
@@ -421,11 +533,11 @@
 				}
 				
 				g.beginPath();
-				g.arc(this.position.x, this.position.y, dr, 0, Math.PI*2, false);
-				g.fill();
+				g.arc(this.position.x, this.position.y, dr*0.8, 0, Math.PI*2, false);
+				//g.fill();
 
 				
-				g.lineWidth = dr;
+				g.lineWidth = dr*1.4;
 				g.beginPath();
 				g.moveTo(this.prevPos2.x, this.prevPos2.y);
 				g.lineTo(this.position.x, this.position.y);
@@ -497,6 +609,19 @@
 		
 		dpWith: function(v) {
 			return this.x * v.x + this.y * v.y;
+		},
+		
+		turnLeft: function() {
+			var oldX = this.x;
+			var oldY = this.y;
+
+			this.x = oldY;
+			this.y = -oldX;
+
+			return this;
 		}
 	};	
+	
+	var _tempVec1 = new Vec2();
+	var _tempVec2 = new Vec2();
 })(window);
